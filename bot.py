@@ -2600,6 +2600,9 @@ async def proccess(filex,user_id,msg,username):
          	
 
 print("started")
+# Compatibilidad con los identificadores de grupos modernos de Telegram.
+import pyrogram.utils
+pyrogram.utils.MIN_CHAT_ID = -999999999999
 bot.start()
 # En el primer arranque, crear el mensaje de datos en el grupo privado.
 if not db_access:
