@@ -2270,14 +2270,27 @@ async def up_revistas_api(file,usid,msg,username):
 							fi = Progress(file,lambda current,total,timestart,filename: uploadfile_progres(current,total,timestart,filename,msg))
 							query = {"uploadedFile":fi,**upload_data}
 							post_file_url = f'{host}$$$call$$$/wizard/file-upload/file-upload-wizard/upload-file?submissionId={up_id}&stageId=1&fileStage=2&reviewRoundId=&assocType=&assocId='
-							async with session.post(post_file_url,data=query) as resp:
+							async with session.post(post_file_url,data=query,headers={'X-Csrf-token':csrfToken}) as resp:
 								text = await resp.text()
-								#print(text)
+								fileId = None
+								data = None
 								try:
-									fileId = str(text).split('"fileId":')[1].split(',')[0]
-									print(fileId)
-								except:
-									print('Ahi no se encuentra fileId')
+									data = json.loads(text)
+									fileId = data.get('fileId') or data.get('id') or data.get('submissionFileId')
+									detail = data.get('data')
+									if fileId is None and isinstance(detail, dict):
+										fileId = detail.get('fileId') or detail.get('id') or detail.get('submissionFileId')
+								except Exception:
+									pass
+								if not fileId:
+									import re
+									match = re.search(r'"(?:fileId|submissionFileId)"\s*:\s*"?(\d+)', text)
+									if match:
+										fileId = match.group(1)
+								if not fileId:
+									print('Mendive upload rejected; HTTP', resp.status, 'response keys:', list(data.keys()) if isinstance(data, dict) else 'non-json')
+								else:
+									print('Mendive upload returned file ID:', fileId)
 								if fileId:
 									url = host+'$$$call$$$/api/file/file-api/download-file?fileId='+str(fileId)+'&revision=1&submissionId='+up_id+'&stageId=1'
 									await msg.edit(f"✅ Finalizado \n\n{file.split('/')[-1]}\n[ .txt ] ⤵️")
