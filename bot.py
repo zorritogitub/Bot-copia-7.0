@@ -50,18 +50,16 @@ from decorators import async_decorator
 
 from RVClient import Rlogin
 
-api_id = 10181262
-api_hash = "f52b5a057b73b9974eaa7403e04907f0"
-bot_token = "5947045568:AAE0mfkt85dPRAYIKGBEFdHd4qG4U3Y4bAA"
-Channel_Id = -4053504410
-bot =  Client("bot",api_id=api_id,api_hash=api_hash,bot_token=bot_token)
-boss = ['raydel0307','darielxd','JAGB2021']#usuarios supremos
-
-Configs = {"uclv":'',"gtm":"","uvs":"","ltu":"", 
-			"ucuser": "", "ucpass":"","uclv_p":"", "gp":None, "s":"On", 
-			'jvc2006': {'z': 99,"m":"e","a":"c","t":"y","gp":False},
-			'darielxd': {'z': 99,"m":"e","a":"c","t":"y","gp":False},
-			'JAGB2021': {'z': 99,"m":"e","a":"c","t":"y","gp":False}	                }
+# Configuración privada desde variables de entorno de Render
+api_id = int(os.environ["TELEGRAM_API_ID"])
+api_hash = os.environ["TELEGRAM_API_HASH"]
+bot_token = os.environ["BOT_TOKEN"]
+Channel_Id = int(os.environ["DB_CHAT_ID"])
+bot = Client("bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
+boss = [os.environ.get("BOT_ADMIN_USERNAME", "Thedota9")]
+Configs = {"uclv":"", "gtm":"", "uvs":"", "ltu":"",
+           "ucuser":"", "ucpass":"", "uclv_p":"", "gp":None, "s":"On",
+           boss[0]: {"z":99, "m":"e", "a":"c", "t":"y", "gp":False}}
 
 Urls = {} #urls subidos a educa
 Urls_draft = {} #urls para borrar de draft
@@ -70,8 +68,8 @@ id_de_ms = {} #id de mensage a borrar con la funcion de cancelar
 root = {} #directorio actual
 downlist = {} #lista de archivos descargados
 procesos = 0 #numero de procesos activos en el bot
-total_up = {'darielxd':{'P':0,'S':0},'JAGB2021':{'P':0,'S':0}} #total en gb o megas subidos en bytes (int)
-rvs = {'darielxd':{'h':'','u':'','p':'','up':'','z':0,'m':'m'},'JAGB2021':{'h':'','u':'','p':'','up':'','z':0,'m':'m'}}
+total_up = {boss[0]: {'P': 0, 'S': 0}}
+rvs = {boss[0]: {'h':'','u':'','p':'','up':'','z':0,'m':'m'}}
 
 #inicio
 @bot.on_message(filters.command("start", prefixes="/") & filters.private)
@@ -2603,5 +2601,10 @@ async def proccess(filex,user_id,msg,username):
 
 print("started")
 bot.start()
+# En el primer arranque, crear el mensaje de datos en el grupo privado.
+if not db_access:
+    database = bot.send_message(Channel_Id, dumps(Configs, indent=4))
+    db_access = database.id
+    print("DB_ACCESS_ID:", db_access, flush=True)
 print(10)
 bot.loop.run_forever()

@@ -1,4 +1,3 @@
 #!/bin/bash
-sed -i "s/Listen 80/Listen 10000/" /etc/apache2/ports.conf
-/etc/init.d/apache2 start
-python3 bot.py
+python3 -m http.server "${PORT:-10000}" --bind 0.0.0.0 --directory /tmp &
+exec python3 bot.py
