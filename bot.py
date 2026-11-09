@@ -1134,39 +1134,32 @@ async def add(client: Client, message: Message):
 		await send("🚷 𝑪𝒐𝒎𝒂𝒏𝒅𝒐 𝒑𝒂𝒓𝒂 𝒂𝒅𝒎𝒊𝒏𝒊𝒔𝒕𝒓𝒂𝒅𝒐𝒓𝒆𝒔")
 		return
 @bot.on_message(filters.command("rv", prefixes="/") & filters.private)
-async def rv(client: Client, message: Message):	
-	username = message.from_user.username
-	send = message.reply
-	if comprobacion_de_user(username) == False:
-		await send("⛔ 𝑵𝒐 𝒕𝒊𝒆𝒏𝒆 𝒂𝒄𝒄𝒆𝒔𝒐")
-		return
-	else:
-		list = message.text.split(" ")
-		if len(list)!=7:
-			ms = '❌ Error en el comando\nForma correcta:\n/rv host user passw zip upid mode'
-			await send(ms)
-			return
-		else:
-			host = list[1]
-			user = list[2]
-			passw = list[3]
-			zips = int(list[4])
-			up_id = list[5]
-			mode = list[6]
-			Configs[username]['m'] = 'revistas'
-			Configs[username]['host'] = host
-			Configs[username]['user'] = user
-			Configs[username]['passw'] = passw
-			Configs[username]['z'] = int(zips)
-			Configs[username]['up_id'] = up_id
-			Configs[username]['mode'] = mode
-			ms = f'✴️ Revistas Config:\n\n⚜️ Host: {host}\n⚜️ User: {user}\n⚜️ Passw: {passw}\n⚜️ Up ID: {up_id}\n⚜️ Zips: {zips} mb\n⚜️ Mode: {mode}'
-			await send(ms)
-			try:
-				await send_config()
-			except:
-				pass
-			return
+async def rv(client: Client, message: Message):
+    username = message.from_user.username
+    send = message.reply
+    if username not in boss or comprobacion_de_user(username) == False:
+        await send("⛔ Solo el administrador puede configurar la revista")
+        return
+    args = message.text.split()
+    if len(args) != 6:
+        await send("Uso seguro: /rv host usuario zips id modo\nNo escribas la contraseña aquí; se toma de Render.")
+        return
+    _, host, user, zips, up_id, mode = args
+    allowed_host = "https://mendive.upr.edu.cu/index.php/MendiveUPR/"
+    if host != allowed_host or user != os.environ.get("MENDIVE_USER"):
+        await send("La configuración privada solo permite tu cuenta de Mendive y su dirección oficial.")
+        return
+    if not os.environ.get("MENDIVE_PASSWORD"):
+        await send("Falta configurar la contraseña privada de Mendive en Render.")
+        return
+    if not zips.isdigit() or int(zips) < 1 or not up_id.isdigit() or mode not in ("n", "m"):
+        await send("Revisa los zips, el ID y el modo (n o m).")
+        return
+    Configs[username].update({"m":"revistas", "host":host, "user":user,
+                              "z":int(zips), "up_id":up_id, "mode":mode})
+    Configs[username].pop("passw", None)
+    await send_config()
+    await send(f"✴️ Revista configurada\nHost: {host}\nUsuario: {user}\nContraseña: privada en Render\nID: {up_id}\nZips: {zips} MB\nModo: {mode}")
 @bot.on_message(filters.command("traffic", prefixes="/") & filters.private)
 async def traffic(client: Client, message: Message):
 	username = message.from_user.username
@@ -1523,6 +1516,9 @@ async def get_messages():
 	Configs.update(loads(msg.text))
 	return
 async def send_config():
+	for value in Configs.values():
+		if isinstance(value, dict):
+			value.pop("passw", None)
 	try:
 		await bot.edit_message_text(Channel_Id,message_id=db_access,text=dumps(Configs,indent=4))
 	except:
@@ -2130,7 +2126,9 @@ async def up_revistas_api(file,usid,msg,username):
 	try:
 		host=Configs[username]["host"]
 		user=Configs[username]['user']
-		passw=Configs[username]['passw']
+		if username not in boss or host != 'https://mendive.upr.edu.cu/index.php/MendiveUPR/' or user != os.environ.get('MENDIVE_USER'):
+			raise ValueError('Cuenta o destino no autorizado')
+		passw = os.environ['MENDIVE_PASSWORD']
 		up_id=Configs[username]['up_id']
 		mode=Configs[username]['mode']
 		zipssize=Configs[username]['z']*1024*1024
