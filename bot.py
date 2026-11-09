@@ -2614,7 +2614,16 @@ print("started")
 # Compatibilidad con los identificadores de grupos modernos de Telegram.
 import pyrogram.utils
 pyrogram.utils.MIN_CHAT_ID = -999999999999
-bot.start()
+# Telegram limita autorizaciones repetidas tras varios reinicios.
+# Esperar el plazo solicitado sin reiniciar el proceso ni acosar el servicio.
+from pyrogram.errors import FloodWait
+while True:
+    try:
+        bot.start()
+        break
+    except FloodWait as e:
+        print("Telegram limita el inicio; esperando", e.value, "segundos", flush=True)
+        sleep(e.value + 10)
 # En el primer arranque, crear el mensaje de datos en el grupo privado.
 if not db_access:
     database = bot.send_message(Channel_Id, dumps(Configs, indent=4))
