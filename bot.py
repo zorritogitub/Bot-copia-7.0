@@ -2194,7 +2194,7 @@ async def up_revistas_api(file,usid,msg,username):
 								except:
 									pass
 							await msg.edit(f"✅ Finalizado \n\n{file.split('/')[-1]}\n[ .txt ] ⤵️")
-							txtname = file.split('.')[0].replace(' ','_')+'.txt'
+							txtname = file + '.enlace.txt'
 							with open(txtname,"w") as t:
 								message = ""
 								for li in links:
@@ -2217,7 +2217,7 @@ async def up_revistas_api(file,usid,msg,username):
 									parse = str(text).replace('\/','/')
 									url = str(parse).split('url":"')[1].split('"')[0]
 									await msg.edit(f"✅ Finalizado \n\n{file.split('/')[-1]}\n[ .txt ] ⤵️")
-									txtname = file.split('.')[0].replace(' ','_')+'.txt'
+									txtname = file + '.enlace.txt'
 									with open(txtname,"w") as t:
 										t.write(url)
 										t.close()
@@ -2253,7 +2253,7 @@ async def up_revistas_api(file,usid,msg,username):
 								except:
 									pass
 							await msg.edit(f"✅ Finalizado \n\n{file.split('/')[-1]}\n[ .txt ] ⤵️")
-							txtname = file.split('.')[0].replace(' ','_')+'.txt'
+							txtname = file + '.enlace.txt'
 							with open(txtname,"w") as t:
 								message = ""
 								for li in links:
@@ -2294,7 +2294,7 @@ async def up_revistas_api(file,usid,msg,username):
 								if fileId:
 									url = host+'$$$call$$$/api/file/file-api/download-file?fileId='+str(fileId)+'&revision=1&submissionId='+up_id+'&stageId=1'
 									await msg.edit(f"✅ Finalizado \n\n{file.split('/')[-1]}\n[ .txt ] ⤵️")
-									txtname = file.split('.')[0].replace(' ','_')+'.txt'
+									txtname = file + '.enlace.txt'
 									with open(txtname,"w") as t:
 										t.write(url)
 										t.close()
@@ -2375,7 +2375,7 @@ async def revgacetaestudiantil_api(file,usid,msg,username):
 					except:
 						pass
 				await msg.edit(f"✅ Finalizado ✅ \n\n{file.split('/')[-1]}\n[ .txt ] ⤵️")
-				txtname = file.split('.')[0].replace(' ','_')+'.txt'
+				txtname = file + '.enlace.txt'
 				with open(txtname,"w") as t:
 					message = ""
 					for li in links:
@@ -2423,7 +2423,7 @@ async def revgacetaestudiantil_api(file,usid,msg,username):
 					url = str(text).split('"controls"><a href="')[1].split('">')[0]
 					await bot.send_message(username,url)
 					await msg.edit(f"✅ Finalizado ✅ \n\n{file.split('/')[-1]}\n[ .txt ] ⤵️")
-					txtname = file.split('.')[0].replace(' ','_')+'.txt'
+					txtname = file + '.enlace.txt'
 					with open(txtname,"w") as t:
 						t.write(url)
 						t.close()
