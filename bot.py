@@ -49,7 +49,7 @@ from moodle import delete
 from decorators import async_decorator
 
 from RVClient import Rlogin
-from varela_client import upload as upload_varela, VarelaError
+from varela_client import upload as upload_varela, diagnostic as diagnostic_varela, VarelaError
 
 # Tasks are tracked separately; no credentials are stored in Telegram config.
 varela_tasks = {}
@@ -1171,6 +1171,16 @@ async def rv(client: Client, message: Message):
     Configs[username].pop("passw", None)
     await send_config()
     await send(f"✴️ Revista configurada\nHost: {host}\nUsuario: {user}\nContraseña: privada en Render\nID: {up_id}\nZips: {zips} MB\nModo: {mode}")
+@bot.on_message(filters.command("varelaestado", prefixes="/") & filters.private)
+async def varela_estado(client: Client, message: Message):
+    # Stable Telegram ID plus the existing administrator username; no settings changed.
+    if not message.from_user or message.from_user.id != 6837570651 or message.from_user.username not in boss:
+        await message.reply("⛔ Solo el administrador puede consultar este diagnóstico.")
+        return
+    status = await message.reply("Comprobando Varela sin subir archivos ni modificar el borrador…")
+    report = await diagnostic_varela(os.environ.get("VARELA_USER"), os.environ.get("VARELA_PASSWORD"))
+    await status.edit(report)
+
 @bot.on_message(filters.command("varela", prefixes="/") & filters.private)
 async def select_varela(client: Client, message: Message):
     username = message.from_user.username
