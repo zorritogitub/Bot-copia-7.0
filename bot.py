@@ -49,6 +49,10 @@ from moodle import delete
 from decorators import async_decorator
 
 from RVClient import Rlogin
+from varela_client import upload as upload_varela, VarelaError
+
+# Tasks are tracked separately; no credentials are stored in Telegram config.
+varela_tasks = {}
 
 # Configuración privada desde variables de entorno de Render
 api_id = int(os.environ["TELEGRAM_API_ID"])
@@ -950,6 +954,8 @@ async def up(client: Client, message: Message):
 				await uploadfileapi(path,user_id,msg,username)
 		elif Configs[username]["m"] == "n":
 			await proccess(path,user_id,msg,username)
+		elif Configs[username]["m"] == "varela":
+			await up_varela(path,msg,username)
 		elif Configs[username]["m"] == "revistas":
 			print('revistas')
 			await up_revistas_api(path,user_id,msg,username)
@@ -1019,6 +1025,11 @@ async def cancel(client: Client, message: Message):
 		await send("⛔ 𝑵𝒐 𝒕𝒊𝒆𝒏𝒆 𝒂𝒄𝒄𝒆𝒔𝒐")
 		return
 	else:pass
+	task = varela_tasks.get(username)
+	if task and not task.done():
+		task.cancel()
+		await send("Cancelación solicitada. Si ya empezó la carga, revisa el borrador: el resultado remoto puede ser incierto.")
+		return
 	if id_de_ms[username]["proc"] == "Up":
 		p = await client.send_message(username,"𝑷𝒓𝒐𝒄𝒆𝒔𝒂𝒏𝒅𝒐")
 		try:
@@ -1160,6 +1171,60 @@ async def rv(client: Client, message: Message):
     Configs[username].pop("passw", None)
     await send_config()
     await send(f"✴️ Revista configurada\nHost: {host}\nUsuario: {user}\nContraseña: privada en Render\nID: {up_id}\nZips: {zips} MB\nModo: {mode}")
+@bot.on_message(filters.command("varela", prefixes="/") & filters.private)
+async def select_varela(client: Client, message: Message):
+    username = message.from_user.username
+    if username not in boss or comprobacion_de_user(username) == False:
+        await message.reply("⛔ Solo el administrador puede seleccionar Varela")
+        return
+    try:
+        await get_messages()
+    except Exception:
+        await message.reply("No se pudo leer la configuración; no se cambió el destino.")
+        return
+    if not os.environ.get("VARELA_USER") or not os.environ.get("VARELA_PASSWORD"):
+        await message.reply("Faltan VARELA_USER y VARELA_PASSWORD en las variables privadas de Render.")
+        return
+    if id_de_ms[username]["proc"] == "Up":
+        await message.reply("Hay una subida activa; espera o usa /cancel antes de cambiar el destino.")
+        return
+    previous = Configs[username].get("m")
+    Configs[username]["m"] = "varela"
+    try:
+        await bot.edit_message_text(Channel_Id, message_id=db_access, text=dumps(Configs, indent=4))
+    except Exception:
+        Configs[username]["m"] = previous
+        await message.reply("No se pudo guardar el destino; no se cambió la configuración.")
+        return
+    await message.reply("Varela seleccionado: borrador 2164. Usa /up con el número del archivo. No se enviará el artículo.")
+
+async def up_varela(path, msg, username):
+    if username not in boss:
+        await msg.edit("⛔ Destino no autorizado")
+        return
+    # Cancellation targets the task actually doing network I/O.
+    task = asyncio.current_task()
+    varela_tasks[username] = task
+    id_de_ms[username] = {"msg": msg, "pat": Path(path).name, "proc": "Up"}
+    try:
+        await msg.edit("Conectando con Revista Varela…")
+        file_id = await upload_varela(path, os.environ.get("VARELA_USER"), os.environ.get("VARELA_PASSWORD"))
+        await msg.edit(f"✅ Archivo confirmado en el borrador 2164 (ID {file_id}). El artículo no se envió.")
+    except asyncio.CancelledError:
+        # Result can be unknown even if the client stops before a response.
+        try: await msg.edit("Cancelado. Si la carga ya empezó, revisa el borrador antes de reintentar.")
+        except Exception: pass
+    except VarelaError as exc:
+        await msg.edit(str(exc))
+    except (asyncio.TimeoutError, aiohttp.ClientError):
+        await msg.edit("Tiempo agotado o fallo de red. Si la carga ya empezó, revisa el borrador antes de reintentar.")
+    except Exception:
+        await msg.edit("No se pudo confirmar la carga. Revisa el borrador antes de reintentar.")
+    finally:
+        if varela_tasks.get(username) is task:
+            varela_tasks.pop(username, None)
+            id_de_ms[username] = {"msg":"", "proc":""}
+
 @bot.on_message(filters.command("traffic", prefixes="/") & filters.private)
 async def traffic(client: Client, message: Message):
 	username = message.from_user.username
